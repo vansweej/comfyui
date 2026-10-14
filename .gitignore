@@ -1,9 +1,7 @@
-# Ignore build outputs from performing a nix-build or `nix build` command
+.nvidia-libs/
+data/
 result
 result-*
-
-# Ignore automatically generated direnv output
-.direnv
-
-# Ignore NixOS interactive test driver history
-**/.nixos-test-history
+__pycache__/
+*.pyc
+.direnv/
