@@ -16,12 +16,13 @@ continuing.
    ssh-copy-id janvansweevelt@<m5-ip>
    ```
 
-3. On M5, pull the required image models while Ollama remains bound to
-   `127.0.0.1:11434`:
+3. On M5, pull the required image models into the image instance with
+   `ollama-imagegen pull ...` (Ollama 0.32.5 on `127.0.0.1:11436`; see
+   [docs/m5-imagegen-instance.md](m5-imagegen-instance.md)):
 
    ```bash
-   ollama pull x/z-image-turbo
-   ollama pull x/flux2-klein
+   ollama-imagegen pull x/z-image-turbo
+   ollama-imagegen pull x/flux2-klein
    ```
 
 ## Exercise the tunnel from oryp6
@@ -42,6 +43,17 @@ the home-manager integration, paired with:
 M5_HOST=<m5-ip> ollama-tunnel start --direct
 ```
 
+## Keep-awake
+
+For the life of the tunnel, a separate multiplexed SSH session runs
+`caffeinate -i -w $PPID`. Set `OLLAMA_TUNNEL_KEEP_AWAKE=0` to opt out.
+Caffeinate prevents idle sleep, but does not survive a closed lid or
+MDM-forced sleep and does not keep the tunnel alive through sleep.
+
+On M5, `pgrep -fl caffeinate` shows `caffeinate -i -w <pid>` while the tunnel
+is up. It is gone a few seconds after `ollama-tunnel stop`.
+
 | Date | Mode | Latency | z-image-turbo | flux2-klein | Notes |
 | --- | --- | --- | --- | --- | --- |
+| 2026-10-14 | ssh | | y | not yet verified | requires Ollama 0.32.5 image instance; breaks on M5 sleep |
 | | | | | | |
