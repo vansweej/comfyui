@@ -56,4 +56,3 @@ is up. It is gone a few seconds after `ollama-tunnel stop`.
 | Date | Mode | Latency | z-image-turbo | flux2-klein | Notes |
 | --- | --- | --- | --- | --- | --- |
 | 2026-10-14 | ssh | | y | not yet verified | requires Ollama 0.32.5 image instance; breaks on M5 sleep |
-| | | | | | |

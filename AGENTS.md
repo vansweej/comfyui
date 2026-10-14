@@ -22,7 +22,7 @@ nix develop .#test --command pytest -q tests/
 | `scripts/` | Shell hooks and command wrappers. |
 | `custom_nodes/ollama_imagegen/` | Ollama image-generation ComfyUI node. |
 | `tests/` | Unit tests for custom nodes. |
-| `docs/` | Host and SSH-tunnel runbooks. |
+| `docs/` | Host, SSH-tunnel, and M5 image-instance (Ollama 0.32.5) runbooks. |
 
 ## Conventions
 
