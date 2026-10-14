@@ -1,6 +1,7 @@
 """Generate ComfyUI images through an Ollama-compatible image endpoint."""
 
 import base64
+import http.client
 import io
 import json
 import os
@@ -36,11 +37,51 @@ def request_image(url: str, body: dict[str, Any], timeout: int) -> str:
 
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-    except urllib.error.URLError as exc:
+            raw = response.read()
+    except urllib.error.HTTPError as exc:
+        try:
+            error_body = exc.read().decode("utf-8", "replace")
+        except Exception:
+            error_body = ""
+        snippet = error_body[:500]
+        message = f"Ollama returned HTTP {exc.code}: {snippet}"
+        if (exc.code == 404 and "page not found" in error_body) or (
+            "not currently supported" in error_body
+        ):
+            message += (
+                " (image generation was removed in Ollama 0.32.6; the tunnel must "
+                "point at the M5 image instance running Ollama 0.32.5 — see "
+                "docs/m5-imagegen-instance.md)"
+            )
+        raise RuntimeError(message) from exc
+    except (
+        http.client.IncompleteRead,
+        http.client.RemoteDisconnected,
+        ConnectionResetError,
+    ) as exc:
         raise RuntimeError(
-            f"Ollama on M5 unreachable at {url}: is the tunnel running "
-            "(`ollama-tunnel start` with M5_HOST set) and Ollama up on M5?"
+            "connection to M5 dropped mid-response (M5 asleep or tunnel died?)"
+        ) from exc
+    except TimeoutError as exc:
+        raise RuntimeError(f"Ollama request to {url} timed out after {timeout}s") from exc
+    except urllib.error.URLError as exc:
+        if isinstance(exc.reason, TimeoutError):
+            raise RuntimeError(
+                f"Ollama request to {url} timed out after {timeout}s"
+            ) from exc
+        if isinstance(exc.reason, ConnectionRefusedError):
+            raise RuntimeError(
+                f"Ollama on M5 unreachable at {url}: tunnel down, run "
+                "`ollama-tunnel start` (with M5_HOST set)"
+            ) from exc
+        raise RuntimeError(f"Ollama on M5 unreachable at {url}: {exc.reason}") from exc
+
+    text = raw.decode("utf-8", "replace")
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(
+            f"Ollama returned an empty or non-JSON response: {text[:200]!r}"
         ) from exc
 
     try:

@@ -1,8 +1,10 @@
 """Unit tests for the Ollama image-generation ComfyUI node."""
 
 import base64
+import contextlib
 import io
 import json
+import socket
 import sys
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -14,6 +16,46 @@ from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "custom_nodes" / "ollama_imagegen"))
 import ollama_imagegen as mod
+
+
+@contextlib.contextmanager
+def canned_server(
+    status: int,
+    body_bytes: bytes,
+    *,
+    content_type: str = "application/json",
+    content_length: int | None = None,
+    truncate: bool = False,
+):
+    """Serve a canned image-generation response for a single test."""
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self) -> None:  # noqa: N802 - HTTPServer callback name
+            assert self.path == "/v1/images/generations"
+            declared = len(body_bytes) if content_length is None else content_length
+            self.send_response(status)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(declared))
+            self.end_headers()
+            self.wfile.write(body_bytes)
+            self.wfile.flush()
+            if truncate:
+                self.connection.shutdown(socket.SHUT_WR)
+                self.close_connection = True
+                return
+
+        def log_message(self, _format: str, *_args: object) -> None:
+            """Suppress expected HTTP request logging during tests."""
+
+    server = HTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield f"http://127.0.0.1:{server.server_port}"
+    finally:
+        server.shutdown()
+        thread.join()
+        server.server_close()
 
 
 def png_b64() -> str:
@@ -85,3 +127,52 @@ def test_request_image_unreachable() -> None:
     """An unavailable endpoint gives the tunnel-specific connection guidance."""
     with pytest.raises(RuntimeError, match="unreachable"):
         mod.request_image("http://127.0.0.1:1", {}, 1)
+
+
+def test_request_image_404_route_removed() -> None:
+    """A missing image route identifies the required pinned Ollama version."""
+    with canned_server(404, b"404 page not found", content_type="text/plain") as url:
+        with pytest.raises(RuntimeError) as exc_info:
+            mod.request_image(url, {}, 5)
+
+    assert "404" in str(exc_info.value)
+    assert "0.32.5" in str(exc_info.value)
+
+
+def test_request_image_400_not_supported() -> None:
+    """Unsupported image models identify the required pinned Ollama version."""
+    body = b'{"error":"image generation models are not currently supported"}'
+    with canned_server(400, body) as url:
+        with pytest.raises(RuntimeError) as exc_info:
+            mod.request_image(url, {}, 5)
+
+    assert "400" in str(exc_info.value)
+    assert "0.32.5" in str(exc_info.value)
+
+
+def test_request_image_500_error_body() -> None:
+    """An HTTP error includes the response detail in the node error."""
+    with canned_server(500, b'{"error":"boom detail"}') as url:
+        with pytest.raises(RuntimeError) as exc_info:
+            mod.request_image(url, {}, 5)
+
+    assert "500" in str(exc_info.value)
+    assert "boom detail" in str(exc_info.value)
+
+
+def test_request_image_empty_200() -> None:
+    """An empty successful response reports that it was not valid JSON."""
+    with canned_server(200, b"") as url:
+        with pytest.raises(RuntimeError) as exc_info:
+            mod.request_image(url, {}, 5)
+
+    assert "empty or non-JSON" in str(exc_info.value)
+
+
+def test_request_image_dropped() -> None:
+    """A truncated response reports a dropped M5 connection."""
+    with canned_server(200, b'{"data', content_length=1000, truncate=True) as url:
+        with pytest.raises(RuntimeError) as exc_info:
+            mod.request_image(url, {}, 5)
+
+    assert "dropped" in str(exc_info.value)
