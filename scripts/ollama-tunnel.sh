@@ -121,11 +121,13 @@ case "$command" in
       # cannot prevent lid-closed sleep and may be overridden by MDM. Opt out with
       # OLLAMA_TUNNEL_KEEP_AWAKE=0.
       ssh -f -N -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ControlMaster=auto -o ControlPersist=yes -o "ControlPath=$CONTROL_PATH" -L "127.0.0.1:${LOCAL_PORT}:127.0.0.1:${REMOTE_PORT}" "${TUNNEL_USER}@${HOST}"
+      printf '%s\n' "$HOST" > "$TARGET_FILE"
       if [ "$KEEP_AWAKE" != "0" ]; then
         # shellcheck disable=SC2016  # single quotes are deliberate: $PPID must expand on M5, not locally
-        ssh -f -o "ControlPath=$CONTROL_PATH" "${TUNNEL_USER}@${HOST}" 'caffeinate -i -w $PPID'
+        if ! ssh -f -o "ControlPath=$CONTROL_PATH" "${TUNNEL_USER}@${HOST}" 'caffeinate -i -w $PPID'; then
+          echo "warning: could not start keep-awake (caffeinate) on M5; tunnel is up but M5 may idle-sleep" >&2
+        fi
       fi
-      printf '%s\n' "$HOST" > "$TARGET_FILE"
     fi
 
     wait_for_ollama
