@@ -27,7 +27,7 @@
       };
       comfyui-check = mkScript "comfyui-check" (with pkgs; [ curl jq coreutils ]);
       comfyui-smoke = mkScript "comfyui-smoke" (with pkgs; [ curl jq coreutils ]);
-      ollama-tunnel = mkScript "ollama-tunnel" (with pkgs; [ openssh curl jq socat coreutils ]);
+      ollama-tunnel = mkScript "ollama-tunnel" (with pkgs; [ openssh_gssapi curl jq socat coreutils ]);
       pythonTest = pkgs.python3.withPackages (ps: [ ps.pytest ps.numpy ps.pillow ]);
     in
     {
@@ -46,7 +46,7 @@
             curl
             jq
             socat
-            openssh
+            openssh_gssapi
             python3
           ]);
           # Bash lives in real .sh files so there is no Nix ''${} escaping.

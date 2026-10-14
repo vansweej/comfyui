@@ -24,7 +24,7 @@ if ! comfyui-check --host; then
 fi
 
 PORT="${COMFYUI_SMOKE_PORT:-18188}"
-if curl -fsS "http://127.0.0.1:${PORT}/system_stats" >/dev/null; then
+if curl -fs "http://127.0.0.1:${PORT}/system_stats" >/dev/null; then
   echo "a service already responds on smoke-test port ${PORT}" >&2
   exit 1
 fi
@@ -46,7 +46,7 @@ comfy_pid="$!"
 timeout="${COMFYUI_SMOKE_TIMEOUT:-600}"
 deadline=$((SECONDS + timeout))
 while [ "$SECONDS" -lt "$deadline" ]; do
-  if curl -fsS "http://127.0.0.1:${PORT}/system_stats" >"$data_dir/system_stats.json"; then
+  if curl -fs "http://127.0.0.1:${PORT}/system_stats" >"$data_dir/system_stats.json"; then
     break
   fi
   sleep 3
