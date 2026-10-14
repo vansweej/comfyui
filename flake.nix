@@ -28,6 +28,7 @@
       comfyui-check = mkScript "comfyui-check" (with pkgs; [ curl jq coreutils ]);
       comfyui-smoke = mkScript "comfyui-smoke" (with pkgs; [ curl jq coreutils ]);
       ollama-tunnel = mkScript "ollama-tunnel" (with pkgs; [ openssh curl jq socat coreutils ]);
+      pythonTest = pkgs.python3.withPackages (ps: [ ps.pytest ps.numpy ps.pillow ]);
     in
     {
       packages.${system} = {
@@ -38,17 +39,23 @@
       checks.${system} = {
         inherit comfyui-wrapper comfyui-check comfyui-smoke ollama-tunnel;
       };
-      devShells.${system}.default = pkgs.mkShell {
-        name = "comfyui";
-        packages = [ comfyui-wrapper comfyui-check comfyui-smoke ollama-tunnel comfyPkg ] ++ (with pkgs; [
-          curl
-          jq
-          socat
-          openssh
-          python3
-        ]);
-        # Bash lives in real .sh files so there is no Nix ''${} escaping.
-        shellHook = "source ${./scripts/shell-hook.sh}";
+      devShells.${system} = {
+        default = pkgs.mkShell {
+          name = "comfyui";
+          packages = [ comfyui-wrapper comfyui-check comfyui-smoke ollama-tunnel comfyPkg ] ++ (with pkgs; [
+            curl
+            jq
+            socat
+            openssh
+            python3
+          ]);
+          # Bash lives in real .sh files so there is no Nix ''${} escaping.
+          shellHook = "source ${./scripts/shell-hook.sh}";
+        };
+        test = pkgs.mkShell {
+          name = "comfyui-test";
+          packages = [ pythonTest ];
+        };
       };
     };
 }
