@@ -2,11 +2,32 @@
 
 ## Why
 
-Ollama 0.32.6+ removed image generation. Keep the daily Ollama.app on the
-latest release at `127.0.0.1:11434`, and use a separate standalone Ollama
-0.32.5 instance for image generation at `127.0.0.1:11436` with its own models
-directory. The standalone tarball has no tray app and no auto-updater, so it
-stays pinned.
+Ollama 0.32.6+ removed image generation. The daily Ollama.app stays on the
+latest release at `127.0.0.1:11434`. A separate frozen Ollama 0.32.5 instance
+serves image generation at `127.0.0.1:11436` with its own models directory.
+
+## How it is provided
+
+The image instance is provided declaratively by the user's home-manager setup:
+the `ollama-imagegen` module in `~/Projects/home-manager`
+(`modules/ollama-imagegen.nix` and that repository's
+`docs/ollama-imagegen.md`). It is imported on M5 (and M1) and is aarch64-darwin
+only.
+
+The module fetches the `ollama-darwin.tgz` v0.32.5 release with `fetchurl`,
+pins its hash, and unpacks it into the Nix store. Nothing is installed outside
+the Nix store and `~/.local`; in particular, nothing goes into `/Applications`
+or a system-level directory. It never auto-updates.
+
+It provides an `ollama-imagegen` command on `PATH` through a
+`writeShellApplication` wrapper. The wrapper always talks to
+`127.0.0.1:11436`, clears every inherited `OLLAMA_*` variable, then sets
+`OLLAMA_HOST=127.0.0.1:11436` and
+`OLLAMA_MODELS=~/.local/share/ollama-imagegen/models`, isolating it from the
+daily Ollama. The wrapper manages the `start`, `stop`, `status`, `logs`, and
+`help` subcommands. Anything else (`serve`, `pull`, `list`, `ps`, `rm`, `show`,
+`--version`, …) passes straight through to the frozen 0.32.5 binary. There is
+no launchd agent: the instance runs on demand via `ollama-imagegen start`.
 
 ## Restore the daily Ollama.app to latest
 
@@ -16,84 +37,81 @@ stays pinned.
 3. Replace `/Applications/Ollama.app`.
 4. Launch it and turn **Auto-download updates** back **ON** in Settings.
 
-## Install the image instance
+## First-time setup on M5
 
-Run these commands on M5:
-
-```bash
-mkdir -p ~/opt/ollama-0.32.5
-cd /tmp
-curl -fLO https://github.com/ollama/ollama/releases/download/v0.32.5/ollama-darwin.tgz
-echo "5789dd037a86adb328c72c11fc45e6c558452d07e5b50814a8bdb7b0fbdbcd81  ollama-darwin.tgz" | shasum -a 256 -c
-tar -xzf ollama-darwin.tgz -C ~/opt/ollama-0.32.5
-ls -R ~/opt/ollama-0.32.5 | head
-```
-
-The tarball layout may put the binary at `~/opt/ollama-0.32.5/ollama` or
-`~/opt/ollama-0.32.5/bin/ollama`. Use whichever exists, and set
-`OLLAMA_IMAGEGEN_BIN` accordingly in the function below. Downloading with curl
-avoids the Gatekeeper quarantine attribute. If macOS still blocks it, run:
-
-```bash
-xattr -dr com.apple.quarantine ~/opt/ollama-0.32.5
-```
-
-## Shell function
-
-Add this to `~/.zshrc`:
-
-```bash
-export OLLAMA_IMAGEGEN_BIN="$HOME/opt/ollama-0.32.5/ollama"
-ollama-imagegen() {
-  OLLAMA_HOST=127.0.0.1:11436 OLLAMA_MODELS="$HOME/.ollama-imagegen/models" "$OLLAMA_IMAGEGEN_BIN" "$@"
-}
-```
-
-## Use it (free-time experiments)
-
-1. In an M5 terminal, run `ollama-imagegen serve` in the foreground. Ctrl-C
-   stops it.
-2. In a second terminal, run these once:
+1. Run `home-manager switch`.
+2. Confirm that `ollama-imagegen --version` reports 0.32.5.
+3. Run `ollama-imagegen start`, then `ollama-imagegen status`.
+4. Pull the image models:
 
    ```bash
    ollama-imagegen pull x/z-image-turbo
    ollama-imagegen pull x/flux2-klein
    ```
 
-3. `ollama-imagegen --version` should report 0.32.5. Alternatively, use
-   `curl -s http://127.0.0.1:11436/api/version`.
-4. `ollama-imagegen list` and `ollama-imagegen ps` work as usual.
-5. Then on oryp6, run `M5_HOST=<m5-ip> ollama-tunnel start`, which forwards
-   local port 11435 to M5 port 11436 by default. Run `ollama-tunnel check`,
-   optionally `ollama-tunnel check --generate`, and then `comfyui`.
+   They require roughly 13 GB and 5.7 GB, respectively.
+5. Optionally test locally:
+
+   ```bash
+   curl -s http://127.0.0.1:11436/api/version
+   ```
+
+## Daily use (free-time experiments)
+
+On M5, start the instance:
+
+```bash
+ollama-imagegen start
+```
+
+On oryp6 in the development shell, start the tunnel (local 11435 → M5 11436 by
+default), check it, optionally generate a test image, and launch ComfyUI:
+
+```bash
+M5_HOST=<m5-ip> ollama-tunnel start
+ollama-tunnel check
+ollama-tunnel check --generate
+comfyui
+```
+
+When finished, run `ollama-tunnel stop` on oryp6 and `ollama-imagegen stop` on
+M5. Use `ollama-imagegen logs` for troubleshooting.
+
+## Paths
+
+| Path | Purpose |
+| --- | --- |
+| `~/.local/share/ollama-imagegen/models` | Models directory |
+| `~/.local/state/ollama-imagegen` | State directory |
+| `~/.local/state/ollama-imagegen/serve.log` | Serve log |
+| `~/.local/state/ollama-imagegen/serve.pid` | PID file |
+
+These directories are created at `home-manager switch`; models are not pulled
+automatically.
 
 ## Fallback if generation fails with an MLX library error
 
-The standalone tarball may lack the MLX runtime. In that case:
-
-1. Download `Ollama-darwin.zip` v0.32.5.
-2. Extract it to `~/opt/ollama-0.32.5-app/`, **not** `/Applications`.
-3. Never launch that `.app`, because it would auto-update and fight the daily
-   app for port 11434.
-4. Set:
-
-   ```bash
-   export OLLAMA_IMAGEGEN_BIN="$HOME/opt/ollama-0.32.5-app/Ollama.app/Contents/Resources/ollama"
-   ```
+If the tarball ever lacks the MLX runtime, change the module's `sources`
+attrset in the home-manager repository to `Ollama-darwin.zip` v0.32.5, then run
+`home-manager switch`. This is a home-manager change, not a manual extraction.
 
 ## Housekeeping
 
-- The separate models directory avoids cross-version interference.
-- After the image instance has its own copies, free roughly 19 GB in the daily
-  instance with `ollama rm x/z-image-turbo x/flux2-klein`.
-- Running both instances at once is fine on a 64 GB M5.
-- Keep the image instance bound to `127.0.0.1` so the SSH tunnel reaches it.
-  Bind `0.0.0.0:11436` only for the `ollama-tunnel start --direct` fallback;
-  that exposes Ollama without authentication to the LAN.
+Free roughly 19 GB in the daily instance with
+`ollama rm x/z-image-turbo x/flux2-klein` (use the daily `ollama`, not
+`ollama-imagegen`). Running both instances at once is fine on a 64 GB M5. The
+image instance is bound to `127.0.0.1` only.
+
+Binding the image instance on the LAN for the `ollama-tunnel start --direct`
+socat fallback is not supported by the current home-manager module because its
+host and port are hard-coded to `127.0.0.1:11436`. The SSH tunnel is the
+supported path; reaching the image instance over `--direct` would require
+changing the home-manager module.
 
 ## Sleep
 
 While the tunnel is up, `ollama-tunnel` holds `caffeinate -i -w $PPID` on M5,
-which prevents idle sleep. It does **not** keep the tunnel alive through sleep:
-a closed lid or MDM-forced sleep still breaks it. Recover with
-`ollama-tunnel start`.
+preventing idle sleep. It does **not** keep the tunnel alive through sleep: a
+closed lid or MDM-forced sleep still breaks it and may stop the background
+serve. Recover with `ollama-imagegen status` and `ollama-imagegen start` on M5,
+then `ollama-tunnel start` on oryp6.

@@ -16,9 +16,9 @@ continuing.
    ssh-copy-id janvansweevelt@<m5-ip>
    ```
 
-3. On M5, pull the required image models into the image instance with
-   `ollama-imagegen pull ...` (Ollama 0.32.5 on `127.0.0.1:11436`; see
-   [docs/m5-imagegen-instance.md](m5-imagegen-instance.md)):
+3. On M5, first start the image instance with `ollama-imagegen start` (provided
+   by home-manager; see [docs/m5-imagegen-instance.md](m5-imagegen-instance.md)),
+   then pull the required image models (Ollama 0.32.5 on `127.0.0.1:11436`):
 
    ```bash
    ollama-imagegen pull x/z-image-turbo
@@ -36,12 +36,10 @@ ollama-tunnel status
 ollama-tunnel stop
 ```
 
-If SSH is unavailable, the fallback is M5 LAN home mode via `ollama-net` from
-the home-manager integration, paired with:
-
-```bash
-M5_HOST=<m5-ip> ollama-tunnel start --direct
-```
+The SSH tunnel is the supported path. The `ollama-tunnel start --direct`
+(socat) fallback cannot reach the image instance because the home-manager
+`ollama-imagegen` module hard-codes `127.0.0.1:11436`; LAN mode was never
+deployed. Using `--direct` would require changing the home-manager module.
 
 ## Keep-awake
 

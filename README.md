@@ -16,7 +16,7 @@ nix develop                 # first run downloads/builds roughly 2 GiB
 comfyui-check
 comfyui-smoke
 
-# On M5, start the image instance with ollama-imagegen serve (see docs/m5-imagegen-instance.md).
+# On M5, start the image instance with ollama-imagegen start (provided by home-manager; see docs/m5-imagegen-instance.md).
 M5_HOST=<m5-ip> ollama-tunnel start
 comfyui
 ```
@@ -60,7 +60,8 @@ multiplexed SSH session running `caffeinate -i -w $PPID` for the life of the
 tunnel, which handles idle sleep but does **not** keep the tunnel alive through
 sleep. Closing the lid or MDM-forced sleep still breaks it; recover by running
 `ollama-tunnel start`, which is idempotent and stale-safe. Set
-`OLLAMA_TUNNEL_KEEP_AWAKE=0` to opt out.
+`OLLAMA_TUNNEL_KEEP_AWAKE=0` to opt out. The background serve may also need
+`ollama-imagegen start` on M5 after sleep.
 
 ### Model idle unload
 

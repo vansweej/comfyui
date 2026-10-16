@@ -41,11 +41,12 @@ nix develop .#test --command pytest -q tests/
 - The `comfy-ui` launcher prepends its own libraries to `LD_LIBRARY_PATH`.
   `comfyui-check --server` and `comfyui-smoke` are the runtime checks that
   `.nvidia-libs` still takes effect.
-- M5's daily Ollama.app stays on the latest release (127.0.0.1:11434); image
-  generation uses a separate standalone Ollama 0.32.5 instance on
-  127.0.0.1:11436 (docs/m5-imagegen-instance.md), which ollama-tunnel targets
-  by default via OLLAMA_TUNNEL_REMOTE_PORT. Ollama 0.32.6+ removed image
-  generation.
+- M5's daily Ollama.app stays on the latest release (127.0.0.1:11434); the
+  home-manager `ollama-imagegen` module provides the separate frozen Ollama
+  0.32.5 image instance on 127.0.0.1:11436, with models in
+  `~/.local/share/ollama-imagegen/models` (see docs/m5-imagegen-instance.md),
+  which ollama-tunnel targets by default via OLLAMA_TUNNEL_REMOTE_PORT. Ollama
+  0.32.6+ removed image generation.
 - The model list `x/z-image-turbo`, `x/flux2-klein` is duplicated in the node
   `INPUT_TYPES`, the `ollama-tunnel check` jq filter, and the docs — keep all
   three in sync.
