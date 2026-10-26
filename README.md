@@ -42,6 +42,7 @@ nix develop .#test --command pytest -q tests/
 - [Host prerequisites](docs/host-prerequisites.md)
 - [Manual SSH-tunnel spike](docs/ssh-tunnel-spike.md)
 - [M5 Ollama image-generation instance](docs/m5-imagegen-instance.md)
+- [M5 headless ComfyUI MPS spike](docs/m5-comfyui-spike.md)
 
 ## Troubleshooting
 
