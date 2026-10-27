@@ -49,6 +49,38 @@ Then open <http://127.0.0.1:8188>. Store models under
 `~/.local/share/comfyui/models`. If you have existing content under the
 legacy repo-local `./data`, run `comfyui-migrate-data` to move it into place.
 
+## Day-to-day: run ComfyUI on M5, use it from oryp6
+
+On **M5**, start (and keep running) ComfyUI, plus the Ollama image instance if
+you use the image-gen node:
+
+```bash
+cd ~/Work/comfyui
+nix develop
+ollama-imagegen start   # optional, for the Ollama Image Gen (M5) node
+comfyui
+```
+
+On **oryp6**, open the tunnel and browse the forwarded port:
+
+```bash
+cd ~/Work/comfyui
+nix develop
+M5_HOST=<m5-ip> m5-tunnel start
+```
+
+Open <http://127.0.0.1:8189> on oryp6 — that's the ComfyUI forward (port 8188
+on M5). Port 11435 is the Ollama forward, used internally by the
+`Ollama Image Gen (M5)` node, not something you browse to directly. Check
+status any time with `m5-tunnel status` / `m5-tunnel check`; stop with
+`m5-tunnel stop` on oryp6 and Ctrl-C `comfyui` on M5.
+
+This has been verified end-to-end on real hardware: `comfyui-check --host`
+and `comfyui-smoke` pass on oryp6's CUDA GPU; `m5-tunnel start`/`check`
+against a real M5 brings up both forwards; and
+`curl http://127.0.0.1:8189/system_stats` from oryp6 reports
+`"devices": [{"type": "mps", ...}]` for the M5-side ComfyUI instance.
+
 ## XDG data and state paths
 
 ComfyUI data (models, output, input, user, custom_nodes, caches) defaults to

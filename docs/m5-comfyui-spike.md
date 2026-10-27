@@ -103,3 +103,10 @@ store path identical to this spike's verified build. The cold M5 build is
 mirakuru, h5py, openai) — use `--max-jobs 1` or `2`. `nix develop --profile
 ~/.local/state/comfyui/dev-profile` supersedes `gcroot-spike`; only remove
 `gcroot-spike` after the `dev-profile` exists and its `comfy-ui` path matches.
+
+**Done (2026-10-27):** Plan B was implemented, pushed, and verified end-to-end
+on real hardware — CUDA checks pass on oryp6 (RTX 2080), the cachix
+substituter is configured and recognized, `m5-tunnel` brings up both forwards
+against a real M5, and ComfyUI on M5 was confirmed serving over the tunnel
+with `Device = mps`. `dev-profile`'s `comfy-ui` path was confirmed identical
+to `gcroot-spike`'s, and `gcroot-spike` has been removed.
