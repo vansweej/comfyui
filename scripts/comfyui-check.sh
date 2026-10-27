@@ -130,9 +130,9 @@ if [ "$run_server" = true ]; then
 fi
 
 if [ "$run_tunnel" = true ]; then
-  echo "== Ollama tunnel =="
-  if ! ollama-tunnel check; then
-    required "Ollama tunnel check failed"
+  echo "== m5-tunnel =="
+  if ! m5-tunnel check; then
+    required "m5-tunnel check failed"
   fi
 fi
 

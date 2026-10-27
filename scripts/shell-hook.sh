@@ -71,6 +71,7 @@ ComfyUI development shell
   comfyui-check (--host --server --tunnel)
   comfyui-smoke
   comfyui-migrate-data
-  ollama-tunnel (start|stop|status|check)
-Set M5_HOST=<ip> before: ollama-tunnel start
+  m5-tunnel (start|stop|status|check)
+  ollama-tunnel: deprecated alias for m5-tunnel
+Set M5_HOST=<ip> before: m5-tunnel start
 EOF
