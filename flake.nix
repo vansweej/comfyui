@@ -39,12 +39,13 @@
           comfyui-check = mkScript "comfyui-check" (with pkgs; [ curl jq coreutils ]);
           comfyui-smoke = mkScript "comfyui-smoke" (with pkgs; [ curl jq coreutils ]);
           ollama-tunnel = mkScript "ollama-tunnel" (with pkgs; [ sshPkg curl jq socat coreutils ]);
+          comfyui-migrate-data = mkScript "comfyui-migrate-data" (with pkgs; [ coreutils findutils ]);
           pythonTest = pkgs.python3.withPackages (ps: [ ps.pytest ps.numpy ps.pillow ]);
         in
         {
           packages =
             {
-              inherit comfyui-wrapper comfyui-check comfyui-smoke ollama-tunnel;
+              inherit comfyui-wrapper comfyui-check comfyui-smoke ollama-tunnel comfyui-migrate-data;
               default = comfyui-check;
             }
             # Evaluable (but not a check) darwin comfy-ui attribute, so the store-path assertion
@@ -56,12 +57,12 @@
           # Only the light script packages on both systems — none reference comfyPkg — so
           # 'nix flake check' stays light and does not realise the darwin/CUDA ComfyUI package.
           checks = {
-            inherit comfyui-wrapper comfyui-check comfyui-smoke ollama-tunnel;
+            inherit comfyui-wrapper comfyui-check comfyui-smoke ollama-tunnel comfyui-migrate-data;
           };
           devShells = {
             default = pkgs.mkShell {
               name = "comfyui";
-              packages = [ comfyui-wrapper comfyui-check comfyui-smoke ollama-tunnel comfyPkg ] ++ (with pkgs; [
+              packages = [ comfyui-wrapper comfyui-check comfyui-smoke ollama-tunnel comfyui-migrate-data comfyPkg ] ++ (with pkgs; [
                 curl
                 jq
                 socat

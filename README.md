@@ -21,7 +21,9 @@ M5_HOST=<m5-ip> ollama-tunnel start
 comfyui
 ```
 
-Then open <http://127.0.0.1:8188>. Store models under `./data/models`.
+Then open <http://127.0.0.1:8188>. Store models under
+`~/.local/share/comfyui/models`. If you have existing content under the
+legacy repo-local `./data`, run `comfyui-migrate-data` to move it into place.
 
 ## Ollama image-generation node
 
