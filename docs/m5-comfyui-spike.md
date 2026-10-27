@@ -93,3 +93,13 @@ The persistent GC root later becomes
 `rm ~/.local/state/comfyui/gcroot-spike` makes the spike closure GC-eligible.
 If the spike is abandoned: `rm` the gcroot and run `nix store gc` to recover
 ~24 GiB.
+
+## Closing note (Plan B)
+
+Plan B's `nix/comfyui-darwin.nix` carries the valkey test-only
+`doCheck = false` override described above and keeps the darwin `comfy-ui`
+store path identical to this spike's verified build. The cold M5 build is
+~3 h with parallelism-sensitive test timeouts (portalocker, python-utils,
+mirakuru, h5py, openai) — use `--max-jobs 1` or `2`. `nix develop --profile
+~/.local/state/comfyui/dev-profile` supersedes `gcroot-spike`; only remove
+`gcroot-spike` after the `dev-profile` exists and its `comfy-ui` path matches.

@@ -30,13 +30,14 @@ continuing.
 ```bash
 cd ~/Work/comfyui
 nix develop
-M5_HOST=<m5-ip> ollama-tunnel start
-ollama-tunnel check
-ollama-tunnel status
-ollama-tunnel stop
+M5_HOST=<m5-ip> m5-tunnel start
+m5-tunnel check
+m5-tunnel status
+m5-tunnel stop
 ```
 
-The SSH tunnel is the supported path. The `ollama-tunnel start --direct`
+`m5-tunnel` is the canonical command (`ollama-tunnel` is kept as a deprecated
+alias). The SSH tunnel is the supported path. The `m5-tunnel start --direct`
 (socat) fallback cannot reach the image instance because the home-manager
 `ollama-imagegen` module hard-codes `127.0.0.1:11436`; LAN mode was never
 deployed. Using `--direct` would require changing the home-manager module.
@@ -49,7 +50,7 @@ Caffeinate prevents idle sleep, but does not survive a closed lid or
 MDM-forced sleep and does not keep the tunnel alive through sleep.
 
 On M5, `pgrep -fl caffeinate` shows `caffeinate -i -w <pid>` while the tunnel
-is up. It is gone a few seconds after `ollama-tunnel stop`.
+is up. It is gone a few seconds after `m5-tunnel stop`.
 
 | Date | Mode | Latency | z-image-turbo | flux2-klein | Notes |
 | --- | --- | --- | --- | --- | --- |

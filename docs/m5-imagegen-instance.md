@@ -68,13 +68,13 @@ On oryp6 in the development shell, start the tunnel (local 11435 → M5 11436 by
 default), check it, optionally generate a test image, and launch ComfyUI:
 
 ```bash
-M5_HOST=<m5-ip> ollama-tunnel start
-ollama-tunnel check
-ollama-tunnel check --generate
+M5_HOST=<m5-ip> m5-tunnel start
+m5-tunnel check
+m5-tunnel check --generate
 comfyui
 ```
 
-When finished, run `ollama-tunnel stop` on oryp6 and `ollama-imagegen stop` on
+When finished, run `m5-tunnel stop` on oryp6 and `ollama-imagegen stop` on
 M5. Use `ollama-imagegen logs` for troubleshooting.
 
 ## Paths
@@ -102,7 +102,7 @@ Free roughly 19 GB in the daily instance with
 `ollama-imagegen`). Running both instances at once is fine on a 64 GB M5. The
 image instance is bound to `127.0.0.1` only.
 
-Binding the image instance on the LAN for the `ollama-tunnel start --direct`
+Binding the image instance on the LAN for the `m5-tunnel start --direct`
 socat fallback is not supported by the current home-manager module because its
 host and port are hard-coded to `127.0.0.1:11436`. The SSH tunnel is the
 supported path; reaching the image instance over `--direct` would require
@@ -110,8 +110,9 @@ changing the home-manager module.
 
 ## Sleep
 
-While the tunnel is up, `ollama-tunnel` holds `caffeinate -i -w $PPID` on M5,
+While the tunnel is up, `m5-tunnel` holds `caffeinate -i -w $PPID` on M5,
 preventing idle sleep. It does **not** keep the tunnel alive through sleep: a
 closed lid or MDM-forced sleep still breaks it and may stop the background
 serve. Recover with `ollama-imagegen status` and `ollama-imagegen start` on M5,
-then `ollama-tunnel start` on oryp6.
+then `m5-tunnel start` on oryp6 (`ollama-tunnel` is a deprecated alias for
+`m5-tunnel`).
