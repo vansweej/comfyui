@@ -1,6 +1,15 @@
 {
   description = "ComfyUI Nix dev-shell flake for oryp6 with M5 Ollama custom node";
 
+  # An input's nixConfig is ignored, so this flake declares its own
+  # substituter directly. It is only honoured for trusted users or with
+  # --accept-flake-config, and it benefits oryp6 only (the cache has no
+  # darwin builds).
+  nixConfig = {
+    extra-substituters = [ "https://comfyui.cachix.org" ];
+    extra-trusted-public-keys = [ "comfyui.cachix.org-1:33mf9VzoIjzVbp0zwj+fT51HG0y31ZTK3nzYZAX0rec=" ];
+  };
+
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     # Deliberately NO inputs.nixpkgs.follows — comfyui-nix pins its own nixpkgs and prebuilt PyTorch CUDA wheels; overriding it would break the wheels.
