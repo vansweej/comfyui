@@ -67,6 +67,7 @@ progress/previews over `/ws`, and confirm the existing Ollama tunnel on port
 
 | Date | Build time | Failures / overrides | Device (mps?) | s/it | Works via tunnel | Writes outside ~/.local | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-10-26 | 2h53m + -j1 retry + 16m41s | valkey doCheck=false (upstream darwin fix incomplete: 13 tests hard-code :6379); portalocker/python-utils/mirakuru/h5py/openai timeouts passed on -j1 retry | y | 0.25 | y | n | SD1.5 fp16 512² 20 steps: 5.3 s/image warm, 15.5 s cold (1.80 it/s cold, 4.02 it/s warm); live progress/preview over tunnel OK; ollama-tunnel alongside: ok |
 
 ## Stop conditions & fallbacks
 
