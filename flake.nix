@@ -31,13 +31,15 @@
             text = builtins.readFile (./scripts + "/${name}.sh");
           };
           # No comfyPkg in runtimeInputs — resolves comfy-ui from the dev-shell PATH (ComfyUI only inside the dev shell); errors if comfy-ui is not on PATH.
+          # coreutils is provided so `uname` resolves deterministically (comfy-ui itself is still resolved from the dev-shell PATH).
           comfyui-wrapper = pkgs.writeShellApplication {
             name = "comfyui";
-            runtimeInputs = [ ];
+            runtimeInputs = [ pkgs.coreutils ];
             text = builtins.readFile ./scripts/comfyui.sh;
           };
           comfyui-check = mkScript "comfyui-check" (with pkgs; [ curl jq coreutils ]);
-          comfyui-smoke = mkScript "comfyui-smoke" (with pkgs; [ curl jq coreutils ]);
+          comfyui-smoke = mkScript "comfyui-smoke" (with pkgs; [ curl jq coreutils ]
+            ++ nixpkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [ pkgs.util-linux ]);
           ollama-tunnel = mkScript "ollama-tunnel" (with pkgs; [ sshPkg curl jq socat coreutils ]);
           comfyui-migrate-data = mkScript "comfyui-migrate-data" (with pkgs; [ coreutils findutils ]);
           pythonTest = pkgs.python3.withPackages (ps: [ ps.pytest ps.numpy ps.pillow ]);

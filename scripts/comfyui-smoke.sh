@@ -15,12 +15,16 @@ if [ "${COMFYUI_SHELL:-}" != "1" ]; then
   exit 1
 fi
 
-if ! comfyui-check --host; then
-  echo "SKIP: host GPU prerequisites not met (see output above)"
-  if [ "$strict" = true ]; then
-    exit 1
+if [ "$(uname)" = "Darwin" ]; then
+  echo "SKIP: host-GPU precheck is not applicable on darwin; MPS is checked via the running server"
+else
+  if ! comfyui-check --host; then
+    echo "SKIP: host GPU prerequisites not met (see output above)"
+    if [ "$strict" = true ]; then
+      exit 1
+    fi
+    exit 0
   fi
-  exit 0
 fi
 
 PORT="${COMFYUI_SMOKE_PORT:-18188}"
@@ -34,14 +38,26 @@ comfy_pid=""
 
 cleanup() {
   if [ -n "$comfy_pid" ]; then
-    kill -- "-$comfy_pid" 2>/dev/null || true
+    if [ "$(uname)" = "Darwin" ]; then
+      # The wrapper execs `caffeinate -i comfy-ui`, so caffeinate runs comfy-ui
+      # as its child; pkill -P reaps that child, then we kill caffeinate itself.
+      pkill -P "$comfy_pid" 2>/dev/null || true
+      kill "$comfy_pid" 2>/dev/null || true
+    else
+      kill -- "-$comfy_pid" 2>/dev/null || true
+    fi
   fi
   rm -rf "$data_dir"
 }
 trap cleanup EXIT INT TERM
 
-setsid env COMFYUI_DATA_DIR="$data_dir" COMFYUI_PORT="$PORT" comfyui >"$data_dir/comfyui.log" 2>&1 &
-comfy_pid="$!"
+if [ "$(uname)" = "Darwin" ]; then
+  env COMFYUI_DATA_DIR="$data_dir" COMFYUI_PORT="$PORT" comfyui >"$data_dir/comfyui.log" 2>&1 &
+  comfy_pid="$!"
+else
+  setsid env COMFYUI_DATA_DIR="$data_dir" COMFYUI_PORT="$PORT" comfyui >"$data_dir/comfyui.log" 2>&1 &
+  comfy_pid="$!"
+fi
 
 timeout="${COMFYUI_SMOKE_TIMEOUT:-600}"
 deadline=$((SECONDS + timeout))
@@ -58,10 +74,16 @@ if [ ! -s "$data_dir/system_stats.json" ]; then
   exit 1
 fi
 
-if ! cuda_name="$(jq -er '.devices[] | select(.type == "cuda") | .name // "CUDA device"' "$data_dir/system_stats.json" | head -n 1)"; then
-  echo "ComfyUI started but reported no CUDA device" >&2
+expected_device="cuda"
+if [ "$(uname)" = "Darwin" ]; then
+  expected_device="mps"
+fi
+
+if ! device_name="$(jq -er --arg device "$expected_device" \
+  '.devices[] | select(.type == $device) | .name // $device' "$data_dir/system_stats.json" | head -n 1)"; then
+  echo "ComfyUI started but reported no $expected_device device" >&2
   exit 1
 fi
 
-echo "CUDA device: $cuda_name"
+echo "$expected_device device: $device_name"
 echo "smoke: PASS"

@@ -39,47 +39,56 @@ for argument in "$@"; do
 done
 
 if [ "$run_host" = true ]; then
-  echo "== Host GPU =="
-
-  if [ ! -f /proc/driver/nvidia/version ]; then
-    required "NVIDIA driver is unavailable; install the Pop!_OS NVIDIA driver"
-  fi
-
-  if ! command -v nvidia-smi >/dev/null 2>&1; then
-    required "nvidia-smi is unavailable"
-  else
-    gpu_info="$(nvidia-smi --query-gpu=name,driver_version --format=csv,noheader 2>/dev/null || true)"
-    driver_version="$(printf '%s\n' "$gpu_info" | awk -F', ' 'NR == 1 { print $NF }')"
-    driver_major="${driver_version%%.*}"
-    if [ -z "$gpu_info" ] || ! [ "$driver_major" -ge 580 ] 2>/dev/null; then
-      required "NVIDIA driver must be version 580 or newer"
+  if [ "$(uname)" = "Darwin" ]; then
+    echo "== Host GPU (darwin, best-effort) =="
+    if command -v sysctl >/dev/null 2>&1 && sysctl -n hw.optional.arm64 2>/dev/null | grep -q '^1$'; then
+      echo "PASS: Apple Silicon detected; Metal Performance Shaders (MPS) should be available"
     else
-      echo "PASS: $gpu_info"
-    fi
-  fi
-
-  if command -v dpkg-query >/dev/null 2>&1; then
-    nvidia_packages="$(dpkg-query -W -f='${binary:Package}\n' '*nvidia*' 2>/dev/null || true)"
-    if ! printf '%s\n' "$nvidia_packages" | grep -Eq 'system76-driver-nvidia|nvidia-driver-[0-9]+(-open)?|libnvidia-compute-[0-9]+'; then
-      warn "no recognised NVIDIA driver package was found by dpkg-query"
+      warn "could not confirm Apple Silicon; MPS availability is best-effort on darwin"
     fi
   else
-    warn "dpkg-query is unavailable; cannot report installed NVIDIA packages"
-  fi
+    echo "== Host GPU =="
 
-  if command -v system76-power >/dev/null 2>&1; then
-    graphics_mode="$(system76-power graphics 2>&1 || true)"
-    if [ "$graphics_mode" = "integrated" ]; then
-      required "system76-power is integrated; run 'sudo system76-power graphics hybrid' (or nvidia) then reboot"
+    if [ ! -f /proc/driver/nvidia/version ]; then
+      required "NVIDIA driver is unavailable; install the Pop!_OS NVIDIA driver"
+    fi
+
+    if ! command -v nvidia-smi >/dev/null 2>&1; then
+      required "nvidia-smi is unavailable"
     else
-      echo "PASS: system76-power graphics ${graphics_mode:-unknown}"
+      gpu_info="$(nvidia-smi --query-gpu=name,driver_version --format=csv,noheader 2>/dev/null || true)"
+      driver_version="$(printf '%s\n' "$gpu_info" | awk -F', ' 'NR == 1 { print $NF }')"
+      driver_major="${driver_version%%.*}"
+      if [ -z "$gpu_info" ] || ! [ "$driver_major" -ge 580 ] 2>/dev/null; then
+        required "NVIDIA driver must be version 580 or newer"
+      else
+        echo "PASS: $gpu_info"
+      fi
     fi
-  else
-    warn "system76-power is unavailable; skipping graphics-mode check"
-  fi
 
-  if [ ! -f /usr/lib/x86_64-linux-gnu/libcuda.so.1 ]; then
-    required "host libcuda.so.1 is unavailable"
+    if command -v dpkg-query >/dev/null 2>&1; then
+      nvidia_packages="$(dpkg-query -W -f='${binary:Package}\n' '*nvidia*' 2>/dev/null || true)"
+      if ! printf '%s\n' "$nvidia_packages" | grep -Eq 'system76-driver-nvidia|nvidia-driver-[0-9]+(-open)?|libnvidia-compute-[0-9]+'; then
+        warn "no recognised NVIDIA driver package was found by dpkg-query"
+      fi
+    else
+      warn "dpkg-query is unavailable; cannot report installed NVIDIA packages"
+    fi
+
+    if command -v system76-power >/dev/null 2>&1; then
+      graphics_mode="$(system76-power graphics 2>&1 || true)"
+      if [ "$graphics_mode" = "integrated" ]; then
+        required "system76-power is integrated; run 'sudo system76-power graphics hybrid' (or nvidia) then reboot"
+      else
+        echo "PASS: system76-power graphics ${graphics_mode:-unknown}"
+      fi
+    else
+      warn "system76-power is unavailable; skipping graphics-mode check"
+    fi
+
+    if [ ! -f /usr/lib/x86_64-linux-gnu/libcuda.so.1 ]; then
+      required "host libcuda.so.1 is unavailable"
+    fi
   fi
 fi
 
@@ -109,9 +118,14 @@ fi
 
 if [ "$run_server" = true ]; then
   echo "== ComfyUI server =="
+  expected_device="cuda"
+  if [ "$(uname)" = "Darwin" ]; then
+    expected_device="mps"
+  fi
   if ! curl -fsS "http://${COMFYUI_LISTEN:-127.0.0.1}:${COMFYUI_PORT:-8188}/system_stats" | jq -e \
-    '[.devices[].type] | index("cuda") != null' >/dev/null; then
-    required "ComfyUI server is unavailable or reports no CUDA device"
+    --arg device "$expected_device" \
+    '[.devices[].type] | index($device) != null' >/dev/null; then
+    required "ComfyUI server is unavailable or reports no $expected_device device"
   fi
 fi
 
