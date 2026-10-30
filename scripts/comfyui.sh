@@ -11,7 +11,7 @@ if [ "$(uname)" = "Darwin" ]; then
   fi
   export COMFY_SKIP_BUNDLED_NODES=1
   export PYTORCH_ENABLE_MPS_FALLBACK=1
-  export PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.70
+  export PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0
   export FORCE_VAE_CPU=1
   exec /usr/bin/caffeinate -i comfy-ui \
     --base-directory "${COMFYUI_DATA_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/comfyui}" \
