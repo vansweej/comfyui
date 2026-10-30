@@ -54,6 +54,12 @@ if [ -d "$COMFYUI_ROOT/custom_nodes/ollama_imagegen" ]; then
     "$COMFYUI_DATA_DIR/custom_nodes/ollama_imagegen"
 fi
 
+if [ -d "$COMFYUI_ROOT/custom_nodes/munsell_grayscale" ]; then
+  ln -sfn \
+    "$COMFYUI_ROOT/custom_nodes/munsell_grayscale" \
+    "$COMFYUI_DATA_DIR/custom_nodes/munsell_grayscale"
+fi
+
 # These only-if-unset exports affect tools run in the dev shell outside
 # ComfyUI. The upstream comfy-ui launcher already exports its own
 # HF_HOME/TORCH_HOME/TORCHINDUCTOR_CACHE_DIR/FACEXLIB_MODELPATH under
